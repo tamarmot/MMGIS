@@ -1,5 +1,6 @@
 /**
  * Middleware between geojson and leaflet to extend and reconstruct new features
+ * 
  */
 
 import $ from 'jquery'
@@ -370,9 +371,11 @@ export const constructVectorLayer = (
     }
 
     let layer
-    if (F_.getIn(layerObj, 'variables.hideMainFeature') === true)
+    if (F_.getIn(layerObj, 'variables.hideMainFeature') === true) {
         layer = L.geoJson(F_.getBaseGeoJSON(), leafletLayerObject)
-    else layer = L.geoJson(geojson, leafletLayerObject)
+    } else {
+        layer = L.geoJson(geojson, leafletLayerObject)
+    }
 
     if (geojson?.features?.length) layer._sourceGeoJSON = geojson
     else if (geojson && geojson.length > 0 && geojson[0].type === 'Feature')
@@ -521,6 +524,7 @@ export const constructSublayers = (
             leafletLayerObject
         ),
         path_gradient: pathGradient(geojson, layerObj, leafletLayerObject),
+        point_circles: pointCircles(geojson, layerObj, leafletLayerObject),
     }
     // We want this to show up first in the list and also want labels for other sublayers too
     sublayers.labels = labels(
@@ -1614,4 +1618,26 @@ const pathGradient = (geojson, layerObj, leafletLayerObject) => {
             title: 'A colorful visualization of values along a path.\nPoint values from the specified feature property are min-max fit to a color ramp.',
         }
     } else return false
+}
+
+const pointCircles = (geojson, layerObj, leafletLayerObject) => {
+    // Render circles around points if they are defined via Extended GeoJson
+    // https://learn.microsoft.com/en-us/azure/azure-maps/extend-geojson
+
+    if (!geojson.features){
+        return false
+    }
+
+    const circleFeatures = geojson.features.filter(f=> (f.geometry?.type == "Point" && f.properties?.subType == "Circle" && f.properties?.radius > 0))
+
+    if (circleFeatures.length) {
+        circleFeatures.forEach(circleFeature => {
+            console.log(L)
+            console.log(L.circle)
+            c = L.circle([circleFeature.geometry.coordinates[1], circleFeature.geometry.coordinates[0]], {radius: circleFeature.properties.radius})
+            c.addTo(leafletLayerObject)
+        })
+        return true
+    }
+    return false
 }
